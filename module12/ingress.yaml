@@ -1,0 +1,62 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: httpserver-gateway
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: httpserver
+    hosts:
+    - "xxx.xxx.com"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: httpserver-vs
+spec:
+  hosts:
+  - "xxx.xxx.com"
+  gateways:
+  - httpserver-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 8080
+        host: httpserver-svc
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: httpserver
+spec:
+  dnsNames:
+  - xxx.xxx.com
+  duration: 2160h0m0s
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: acme
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 4096
+  renewBefore: 360h0m0s
+  secretName: httpserver
+  secretTemplate:
+    annotations:
+      reflector.v1.k8s.emberstack.com/reflection-allowed: 'true'
+      reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: istio-system
+      reflector.v1.k8s.emberstack.com/reflection-auto-enabled: 'true'
